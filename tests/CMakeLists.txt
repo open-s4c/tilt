@@ -1,0 +1,11 @@
+add_executable(mutex_test mutex_test.c wrapper.c)
+target_link_libraries(mutex_test pthread)
+target_compile_definitions(mutex_test PUBLIC _GNU_SOURCE)
+target_compile_options(mutex_test PUBLIC -Wall -Werror)
+add_test(mutex_test mutex_test)
+
+add_executable(cond_test cond_test.c wrapper.c)
+target_link_libraries(cond_test pthread)
+target_compile_definitions(cond_test PUBLIC _GNU_SOURCE)
+target_compile_options(cond_test PUBLIC -Wall -Werror)
+add_test(cond_test cond_test)
