@@ -58,6 +58,8 @@ Now, you can interpose pthread mutex with your lock using `LD_PRELOAD` as follow
 LD_PRELOAD=libmylock.so /path/to/some/multithreaded/program
 ```
 
+See the [examples](examples) directory for more detailed examples.
+
 ## Limitations
 
 The following assumptions must hold:
