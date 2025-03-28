@@ -1,6 +1,8 @@
 #include <pthread.h>
 
-int main() {
+int
+main(void)
+{
     pthread_mutex_t m;
     pthread_mutex_init(&m, NULL);
     /*
