@@ -15,7 +15,7 @@ static void tilt_mutex_init(tilt_mutex_t *m);
 static void tilt_mutex_destroy(tilt_mutex_t *m);
 static void tilt_mutex_lock(tilt_mutex_t *m);
 static void tilt_mutex_unlock(tilt_mutex_t *m);
-static int tilt_mutex_trylock(tilt_mutex_t *m);
+static bool tilt_mutex_trylock(tilt_mutex_t *m);
 ```
 
 Here is a straightforward implementation of a "test-and-set" spinlock:
