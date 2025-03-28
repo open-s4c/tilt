@@ -9,7 +9,7 @@
 /*******************************************************************************
  * @file tilt.h
  * @brief Lightweight pthread mutex interposition framework
- * @version 2.1
+ * @version 2.2
  *
  * Tilt is a lightweight framework to intercept calls to pthread mutex and
  * replace them with user defined implementations.
@@ -57,7 +57,7 @@ static bool tilt_mutex_trylock(struct tilt_mutex *m);
 /* *****************************************************************************
  * Tilt interface control
  * ****************************************************************************/
-static bool _tilt_enabled = true;
+static bool _tilt_enabled = false;
 
 /* Check wheter tilt is enabled. This function is used to fallback to pthread
  * interface at the end of the execution of a program. */
@@ -67,13 +67,14 @@ tilt_enabled(void)
     return __atomic_load_n(&_tilt_enabled, __ATOMIC_RELAXED);
 }
 
-/* Disable tilt interface and fallback to pthread. The set of locks used after
- * disabling the interface should be disjoint from the set of locks while tilt
- * is enabled. This should only be used when the program is terminating. */
+/* Enable/disable tilt interface and fallback to pthread. The set of locks used
+ * after disabling the interface should be disjoint from the set of locks while
+ * tilt is enabled. This should only be used when the program is terminating.
+ */
 static inline void
-tilt_disable(void)
+tilt_control(bool enable)
 {
-    __atomic_store_n(&_tilt_enabled, false, __ATOMIC_RELAXED);
+    __atomic_store_n(&_tilt_enabled, enable, __ATOMIC_RELAXED);
 }
 
 /* *****************************************************************************
@@ -105,7 +106,7 @@ _tilt_cond_init(struct _tilt_cond *c)
 /* *****************************************************************************
  * Interposition helpers
  * ****************************************************************************/
-#if defined(__linux__)
+#if defined(__linux__) || defined(__NetBSD__)
     #include <dlfcn.h>
 
     #define TILT_REAL(F, ...)                                                  \
@@ -173,13 +174,15 @@ TILT_INTERPOSE(int, pthread_mutex_trylock, pthread_mutex_t *mutex)
     return tilt_mutex_trylock(TILT_MUTEX(mutex)) ? 0 : 1;
 }
 
-#if 0
+#if !defined(__APPLE__)
 TILT_INTERPOSE(int, pthread_mutex_timedlock, pthread_mutex_t *mutex,
                const struct timespec *abstime)
 {
     if (!tilt_enabled())
         return TILT_REAL(pthread_mutex_timedlock, mutex, abstime);
+
     assert(0 && "timedlock() not implemented");
+
     return 0;
 }
 #endif
@@ -279,9 +282,20 @@ TILT_INTERPOSE(int, pthread_cond_broadcast, pthread_cond_t *cond)
 /* Interposition of exit function disables tilt during exit. */
 TILT_INTERPOSE(void, exit, int status)
 {
-    tilt_disable();
+    tilt_control(false);
     TILT_REAL(exit, status);
 }
+
+#if defined(__NetBSD__)
+/* Interposition of atexit function to help initialization on NetBSD. */
+TILT_INTERPOSE(int, atexit, void (*arg)(void))
+{
+    tilt_control(false);
+    int r = TILT_REAL(atexit, arg);
+    tilt_control(true);
+    return r;
+}
+#endif
 
 /* *****************************************************************************
  * Macro cleanup
